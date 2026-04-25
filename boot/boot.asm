@@ -1,4 +1,4 @@
-; BananaOS - boot.asm
+; Banana OS 0.2 - boot.asm
 ; Multiboot2 header + kernel entry point
 
 MB2_MAGIC   equ 0xE85250D6

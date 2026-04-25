@@ -232,10 +232,10 @@ static void show_about(void) {
     terminal_clear();
 
     const sysinfo_t* si = sysinfo_get();
-    terminal_write_color("Banana OS - About app\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
+    terminal_write_color("Banana OS 0.2 - About app\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
     terminal_writeln("----------------------------------------");
     terminal_write_color("Version: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    terminal_writeln("v0.1");
+    terminal_writeln("0.2");
     terminal_write_color("Display: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     terminal_writeln("VGA text 80x25 + basic GUI taskbar");
     terminal_write_color("CPU: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
@@ -503,8 +503,8 @@ void gui_poll(void) {
             int my0 = ((int)fi->height - mh) / 2;
             gfx_fill_rect(mx0, my0, mw, mh, 0x00303030u);
             gfx_fill_rect(mx0, my0, mw, 20, 0x004040A0u);
-            gfx_draw_text(mx0 + 8, my0 + 6, "About BananaOS", 0x00FFFFFFu, 0x004040A0u);
-            gfx_draw_text(mx0 + 16, my0 + 40, "Banana OS v0.1", 0x00FFFFFFu, 0x00303030u);
+            gfx_draw_text(mx0 + 8, my0 + 6, "About Banana OS 0.2", 0x00FFFFFFu, 0x004040A0u);
+            gfx_draw_text(mx0 + 16, my0 + 40, "Banana OS 0.2", 0x00FFFFFFu, 0x00303030u);
             gfx_draw_text(mx0 + 16, my0 + 56, "Desktop: basic framebuffer GUI", 0x00FFFFFFu, 0x00303030u);
             gfx_draw_text(mx0 + 16, my0 + 80, "Click anywhere to close", 0x00AAAAAAu, 0x00303030u);
         }

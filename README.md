@@ -1,6 +1,6 @@
-# 🍌 BananaOS v0.1
+# 🍌 Banana OS 0.2
 
-BananaOS is a minimal x86 operating system written from scratch (no Linux kernel, no external OS kernel), bootable in VirtualBox/QEMU via GRUB + Multiboot2.
+Banana OS 0.2 is a minimal x86 operating system written from scratch (no Linux kernel, no external OS kernel), bootable in VirtualBox/QEMU via GRUB + Multiboot2.
 
 ```
   ____                               ____  ____
@@ -125,7 +125,7 @@ make
 ## Run in VirtualBox
 
 1. Create a new VM:
-   - Name: `BananaOS`
+   - Name: `Banana OS 0.2`
    - Type: `Other`
    - Version: `Other/Unknown (32-bit)`
 2. Assign at least **8 MB RAM** (more recommended for GUI/testing)

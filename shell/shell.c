@@ -155,13 +155,13 @@ static void cmd_neofetch(void) {
         VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
 
     terminal_write_color("  Banana OS", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
-    terminal_writeln(" v0.1");
+    terminal_writeln(" 0.2");
     terminal_writeln("  --------------------");
 
     terminal_write_color("  OS:       ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    terminal_writeln("Banana OS v0.1");
+    terminal_writeln("Banana OS 0.2");
     terminal_write_color("  KERNEL:   ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    terminal_writeln("Banana Kernel 0.1");
+    terminal_writeln("Banana Kernel 0.2");
     terminal_write_color("  ARCH:     ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     terminal_writeln("x86 (i686)");
     terminal_write_color("  SHELL:    ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
@@ -235,7 +235,7 @@ static void cmd_top(void) {
         terminal_clear();
 
         /* ── HEADER ───────────────────────────── */
-        terminal_write_color("BananaOS htop - press q to quit\n",
+        terminal_write_color("Banana OS 0.2 htop - press q to quit\n",
                              VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
         terminal_writeln("--------------------------------------------");
 
@@ -247,7 +247,7 @@ static void cmd_top(void) {
 
         /* OS VERSION */
         terminal_write_color("OS:  ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-        terminal_writeln("BananaOS v0.1 (Banana Kernel)");
+        terminal_writeln("Banana OS 0.2 (Banana Kernel 0.2)");
 
         /* RAM USAGE */
         uint32_t total_mb = (si->mem_kb / 1024u) + 1u;
@@ -343,7 +343,7 @@ static void cmd_top(void) {
 
 static void cmd_help(void) {
     static const char* lines[] = {
-        "Banana OS - available commands:",
+        "Banana OS 0.2 - available commands:",
         "",
         "  help               show this message",
         "  neofetch           system information",
@@ -506,7 +506,7 @@ static void cmd_run(const char* name) {
 }
 
 static void cmd_uname(void) {
-    terminal_writeln("Banana OS v0.1 x86 Banana Kernel 0.1 sh");
+    terminal_writeln("Banana OS 0.2 x86 Banana Kernel 0.2 sh");
 }
 
 static void cmd_halt(void) {
@@ -517,7 +517,7 @@ static void cmd_halt(void) {
 /* ── prompt ─────────────────────────────────────────────────────── */
 static void print_prompt(void) {
     terminal_write_color("banana",      VGA_COLOR_YELLOW,      VGA_COLOR_BLACK);
-    terminal_write_color("@banana-os",  VGA_COLOR_LIGHT_GREEN,  VGA_COLOR_BLACK);
+    terminal_write_color("@banana-os-0.2",  VGA_COLOR_LIGHT_GREEN,  VGA_COLOR_BLACK);
     terminal_write_color(":",           VGA_COLOR_WHITE,        VGA_COLOR_BLACK);
     terminal_write_color(fs_cwd_name(), VGA_COLOR_LIGHT_BLUE,   VGA_COLOR_BLACK);
     terminal_write_color("$ ",          VGA_COLOR_WHITE,        VGA_COLOR_BLACK);
@@ -741,7 +741,7 @@ void shell_run(void) {
         VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
     
     terminal_writeln("");
-    terminal_write_color("  Welcome to Banana OS v0.1  --  ",
+    terminal_write_color("  Welcome to Banana OS 0.2  --  ",
                          VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     terminal_writeln("type 'help' to get started.");
     terminal_writeln("");

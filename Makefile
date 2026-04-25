@@ -1,4 +1,4 @@
-# BananaOS Makefile
+# Banana OS 0.2 Makefile
 # Requires: nasm, gcc-multilib, ld, grub-pc-bin, grub-common, xorriso
 
 CC      = gcc
