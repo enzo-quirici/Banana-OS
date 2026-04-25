@@ -56,7 +56,7 @@ bananOS/
 - RAM : 8 MB
 - GPU : any sort of graphics accelerator should do it
 - Keyboard / Mouse : PS/2
-- Not haing AI slop
+- Not hating AI slop
 
 ## GUI Overview (`startx`)
 
