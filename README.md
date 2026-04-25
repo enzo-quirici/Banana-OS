@@ -50,6 +50,14 @@ bananOS/
 - In-memory filesystem + shell utilities
 - Built-in editor and live system monitor
 
+# Minimum Requirements
+
+- CPU : Yes
+- RAM : 8 MB
+- GPU : any sort of graphics accelerator should do it
+- Keyboard / Mouse : PS/2
+- Not haing AI slop
+
 ## GUI Overview (`startx`)
 
 - 800x600 framebuffer desktop
