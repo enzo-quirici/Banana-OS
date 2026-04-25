@@ -120,7 +120,7 @@ make
    - Name: `BananaOS`
    - Type: `Other`
    - Version: `Other/Unknown (32-bit)`
-2. Assign at least **32 MB RAM** (more recommended for GUI/testing)
+2. Assign at least **8 MB RAM** (more recommended for GUI/testing)
 3. No virtual disk required
 4. Attach `bananOS.iso` as optical media
 5. Boot
