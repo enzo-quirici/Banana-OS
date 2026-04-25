@@ -1,7 +1,6 @@
 # 🍌 BananaOS v0.1
 
-Un OS minimaliste x86 écrit from scratch (sans Linux ni kernel existant),
-bootable dans VirtualBox via GRUB + Multiboot.
+BananaOS is a minimal x86 operating system written from scratch (no Linux kernel, no external OS kernel), bootable in VirtualBox/QEMU via GRUB + Multiboot2.
 
 ```
   ____                               ____  ____
@@ -11,89 +10,143 @@ bootable dans VirtualBox via GRUB + Multiboot.
  |____/ \__,_|_| |_|\__,_|_| |_|\__,_|___/____/
 ```
 
-## Structure
+## Project Layout
 
 ```
 bananOS/
 ├── boot/
-│   ├── boot.asm        # Entry point Multiboot en assembleur
-│   └── linker.ld       # Script de linker
+│   ├── boot.asm        # Multiboot2 entry point (assembly)
+│   └── linker.ld       # Linker script
 ├── kernel/
 │   ├── kernel.c        # kernel_main()
-│   ├── terminal.c/h    # Driver VGA text 80x25
-│   └── keyboard.c/h    # Driver PS/2 keyboard
+│   ├── terminal.c/h    # Terminal (VGA + framebuffer + virtual terminals)
+│   ├── fb.c/h          # Multiboot2 framebuffer driver
+│   ├── gfx.c/h         # 2D drawing primitives + bitmap font rendering
+│   ├── gui.c/h         # Basic desktop GUI (taskbar/start menu/windows)
+│   ├── process.c/h     # Process table simulation for top
+│   ├── daemon.c/h      # Background daemon loop
+│   └── keyboard.c/h    # PS/2 keyboard driver
 ├── shell/
-│   └── shell.c/h       # Shell CLI (bsh)
+│   ├── shell.c/h       # Banana shell
+│   └── editor.c/h      # Nano-like text editor
 ├── iso/
 │   └── boot/grub/
-│       └── grub.cfg    # Config GRUB
+│       └── grub.cfg    # GRUB config
 ├── Makefile
 ├── build.sh
 └── README.md
 ```
 
-## Commandes disponibles
+## Features
 
-| Commande | Description |
-|----------|-------------|
-| `help` | Affiche la liste des commandes |
-| `neofetch` | Affiche les infos système style neofetch |
-| `echo <texte>` | Affiche du texte |
-| `clear` | Efface l'écran |
-| `uname` | Affiche le nom du système |
-| `keyboardctl [layout]` | Affiche ou change le layout clavier (`EN (Default)`, `fr_CH`, `FR`, `DE`, `de_CH`, `BEPO`) |
-| `loadctl [layout]` | Alias de `keyboardctl` |
-| `usbctl` | Affiche l'état du handoff USB legacy (xHCI/EHCI) |
-| `ip` | Affiche la configuration réseau actuelle |
-| `ip config <ip> <mask> <gateway> <dns1> <dns2>` | Configure le réseau IPv4 statique |
-| `ping <ipv4>` | Lance des tests de connectivité de base |
-| `netd [start|stop|status]` | Contrôle le daemon réseau simulé |
-| `top` | Moniteur live avec table des processus et scheduler |
-| `halt` | Arrête le système |
+- Bare-metal x86 kernel (freestanding C + NASM)
+- Multiboot2 boot flow with framebuffer mode
+- Dual terminal backend:
+  - VGA text mode
+  - Framebuffer-rendered console
+- GUI desktop (started on demand with `startx`)
+- PS/2 keyboard + PS/2 mouse support
+- Multiple draggable terminal windows in GUI mode
+- In-memory filesystem + shell utilities
+- Built-in editor and live system monitor
+
+## GUI Overview (`startx`)
+
+- 800x600 framebuffer desktop
+- Taskbar with:
+  - `Start` button
+  - `Quit` button
+  - live clock
+- Start menu entries:
+  - About app
+  - Terminal
+  - Quit GUI
+- Desktop shortcuts:
+  - About
+  - Terminal
+  - Quit GUI
+- Up to 4 terminal windows (draggable, closable, focusable)
+
+## Available Commands
+
+| Command | Description |
+|---|---|
+| `help` | Show command list |
+| `neofetch` | Show system information |
+| `echo <text>` | Print text |
+| `clear` | Clear screen |
+| `uname` | Show OS/kernel string |
+| `ls` | List current directory |
+| `pwd` | Print current directory |
+| `cd <dir>` | Change directory (`cd ..` to go up) |
+| `mkdir <dir>` | Create directory |
+| `rm <name>` | Remove file or directory |
+| `edit <file>` | Open built-in nano-like editor |
+| `cat <file>` | Print file contents |
+| `run <file.sh>` | Execute script line by line |
+| `uptime` | Show uptime |
+| `top` | Live CPU/RAM/process monitor (`q` to quit) |
+| `startx` | Start GUI desktop |
+| `stopx` | Quit GUI desktop |
+| `start` | Alias of `startx` |
+| `stop` | Alias of `stopx` |
+| `keyboardctl [layout]` | Show/set keyboard layout (`EN (Default)`, `fr_CH`, `FR`, `DE`, `de_CH`, `BEPO`) |
+| `loadctl [layout]` | Alias of `keyboardctl` |
+| `usbctl` | Show USB legacy handoff state |
+| `shutdown [now|-c]` | Schedule shutdown (60s), immediate shutdown, or cancel |
+| `reboot` | Immediate reboot |
+| `halt` | Hard CPU halt |
 
 ## Build (Ubuntu/Debian)
+
+### Quick build
 
 ```bash
 chmod +x build.sh
 ./build.sh
 ```
 
-Ou manuellement :
+### Manual build
 
 ```bash
 sudo apt-get install nasm gcc-multilib grub-pc-bin grub-common xorriso
 make
-# → produit bananOS.iso
+# Output: bananOS.iso
 ```
 
-## Lancer dans VirtualBox
+## Run in VirtualBox
 
-1. **Nouveau VM** → Nom: BananaOS, Type: Other, Version: Other/Unknown (32-bit)
-2. **RAM**: 32 MB minimum
-3. **Pas de disque dur** nécessaire
-4. **Paramètres → Stockage** → ajouter `bananOS.iso` comme lecteur optique
-5. **Démarrer** !
+1. Create a new VM:
+   - Name: `BananaOS`
+   - Type: `Other`
+   - Version: `Other/Unknown (32-bit)`
+2. Assign at least **32 MB RAM** (more recommended for GUI/testing)
+3. No virtual disk required
+4. Attach `bananOS.iso` as optical media
+5. Boot
 
-## Lancer dans QEMU (test rapide)
+## Run in QEMU
 
 ```bash
 qemu-system-i386 -cdrom bananOS.iso
 ```
 
-## Architecture technique
+## Technical Notes
 
-- **Bootloader** : GRUB 2 (Multiboot spec)
-- **Assembleur** : NASM (entry point, stack setup)
-- **Langage** : C freestanding (pas de stdlib, pas de libc)
-- **VGA** : Accès direct à `0xB8000` (text mode 80×25)
-- **Clavier** : Polling PS/2 port `0x60`/`0x64`, scancode set 1
-- **Kernel** : Chargé à `0x100000` (1 MiB)
+- **Bootloader**: GRUB 2 (Multiboot2)
+- **Language**: freestanding C + NASM
+- **Graphics**: 32-bit framebuffer + 8x8 bitmap font
+- **Input**:
+  - PS/2 keyboard (`0x60` / `0x64`)
+  - PS/2 mouse AUX packets
+- **Kernel load address**: `0x100000` (1 MiB)
 
-## Pas de kernel existant !
+## 100% Custom Kernel
 
-Ce projet n'utilise **aucun kernel Linux ou autre**. Tout est custom :
-- Entry point en asm pur
-- Driver VGA en C bare-metal
-- Driver keyboard en C bare-metal  
-- Shell maison
-- Linked avec un linker script custom
+This project uses no existing OS kernel:
+
+- custom assembly entry point
+- custom framebuffer + terminal stack
+- custom keyboard/mouse handling
+- custom shell and in-memory filesystem
+- custom linker script and build chain
