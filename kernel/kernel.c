@@ -1,0 +1,41 @@
+#include "terminal.h"
+#include "keyboard.h"
+#include "sysinfo.h"
+#include "process.h"
+#include "timer.h"
+#include "usb.h"
+#include "daemon.h"
+#include "types.h"
+#include "gui.h"
+#include "fb.h"
+#include "gfx.h"
+#include "../shell/shell.h"
+
+#define MULTIBOOT2_MAGIC 0x36D76289
+
+void kernel_main(uint32_t magic, uint32_t mb_info) {
+    /* Parse Multiboot2 info first so the console can choose framebuffer mode. */
+    if (magic == MULTIBOOT2_MAGIC) {
+        fb_init_multiboot2(mb_info);
+        gfx_init();
+        sysinfo_init_mb2(mb_info);
+    }
+
+    terminal_init();
+    timer_init();
+    process_init();
+    usb_init();       /* xHCI legacy handoff → USB keyboards work via PS/2 */
+    mouse_init();     /* enable PS/2 AUX port for USB/PS2 mice */
+    keyboard_init();  /* drain buffer after USB init */
+    daemon_init();
+    gui_init();
+
+    if (magic != MULTIBOOT2_MAGIC) {
+        terminal_write_color(
+            "ERROR: Not loaded by a Multiboot2 bootloader!\n",
+            VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        while (1) __asm__("hlt");
+    }
+
+    shell_run();
+}
