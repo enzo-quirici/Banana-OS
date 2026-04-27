@@ -6,6 +6,12 @@
 typedef struct {
     char     cpu_vendor[13];    /* e.g. "GenuineIntel" */
     char     cpu_brand[49];     /* full CPU name string */
+    uint32_t cpu_cores;         /* physical cores per package (best effort) */
+    uint32_t cpu_threads;       /* logical threads per package */
+    uint32_t cpu_family;
+    uint32_t cpu_model;
+    uint32_t cpu_stepping;
+    uint32_t cpu_has_ht;        /* 1 if Hyper-Threading flag set */
     uint32_t mem_kb;            /* total memory in KiB from multiboot */
 } sysinfo_t;
 

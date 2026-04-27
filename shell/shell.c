@@ -9,6 +9,8 @@
 #include "../kernel/usb.h"
 #include "../kernel/process.h"
 #include "../kernel/gui.h"
+#include "../kernel/fb.h"
+#include "../kernel/rtc.h"
 #include "../kernel/types.h"
 
 /* ── string helpers ─────────────────────────────────────────────── */
@@ -60,6 +62,15 @@ static int next_token(const char** p, char* out, int outlen) {
     out[(i < outlen - 1) ? i : (outlen - 1)] = '\0';
     *p = s + i;
     return 1;
+}
+
+static int has_flag(const char* args, const char* flag) {
+    const char* p = args ? args : "";
+    char tok[32];
+    while (next_token(&p, tok, sizeof(tok))) {
+        if (k_strcmp(tok, flag) == 0) return 1;
+    }
+    return 0;
 }
 
 /* ── ACPI power off ──────────────────────────────────────────────── */
@@ -155,13 +166,13 @@ static void cmd_neofetch(void) {
         VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
 
     terminal_write_color("  Banana OS", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
-    terminal_writeln(" 0.2");
+    terminal_writeln(" 0.3");
     terminal_writeln("  --------------------");
 
     terminal_write_color("  OS:       ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    terminal_writeln("Banana OS 0.2");
+    terminal_writeln("Banana OS 0.3");
     terminal_write_color("  KERNEL:   ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    terminal_writeln("Banana Kernel 0.2");
+    terminal_writeln("Banana Kernel 0.3");
     terminal_write_color("  ARCH:     ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     terminal_writeln("x86 (i686)");
     terminal_write_color("  SHELL:    ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
@@ -190,6 +201,159 @@ static void cmd_uptime(void) {
     terminal_write_color("Uptime: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     print_uptime();
     terminal_putchar('\n');
+}
+
+static void cmd_proc_info(const char* args) {
+    const sysinfo_t* si = sysinfo_get();
+    int show_all = (!args || !*k_skip_spaces(args));
+
+    if (show_all || has_flag(args, "-n")) {
+        terminal_write_color("CPU name: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(si->cpu_brand[0] ? si->cpu_brand : "Unknown");
+    }
+    if (show_all || has_flag(args, "-v")) {
+        terminal_write_color("Vendor: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(si->cpu_vendor[0] ? si->cpu_vendor : "Unknown");
+    }
+    if (show_all || has_flag(args, "-c")) {
+        char b[16];
+        terminal_write_color("Cores: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(u32_to_str(si->cpu_cores, b, sizeof(b)));
+    }
+    if (show_all || has_flag(args, "-t")) {
+        char b[16];
+        terminal_write_color("Threads: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(u32_to_str(si->cpu_threads, b, sizeof(b)));
+    }
+    if (show_all || has_flag(args, "-f")) {
+        char b[16];
+        terminal_write_color("Family: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(u32_to_str(si->cpu_family, b, sizeof(b)));
+    }
+    if (show_all || has_flag(args, "-m")) {
+        char b[16];
+        terminal_write_color("Model: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(u32_to_str(si->cpu_model, b, sizeof(b)));
+    }
+    if (show_all || has_flag(args, "-s")) {
+        char b[16];
+        terminal_write_color("Stepping: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(u32_to_str(si->cpu_stepping, b, sizeof(b)));
+    }
+    if (show_all || has_flag(args, "-ht")) {
+        terminal_write_color("Hyper-Threading: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(si->cpu_has_ht ? "yes" : "no");
+    }
+}
+
+static void cmd_ram_info(const char* args) {
+    const sysinfo_t* si = sysinfo_get();
+    uint32_t total_kb = si->mem_kb;
+    uint32_t used_bytes = fs_ram_used_bytes();
+    uint32_t used_kb = (used_bytes + 1023u) / 1024u;
+    uint32_t free_kb = (total_kb > used_kb) ? (total_kb - used_kb) : 0;
+    uint32_t pct = (total_kb > 0) ? ((used_kb * 100u) / total_kb) : 0;
+    int show_all = (!args || !*k_skip_spaces(args));
+    char b[16];
+
+    if (show_all || has_flag(args, "-t")) {
+        terminal_write_color("Total RAM: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_write(u32_to_str((total_kb / 1024u) + 1u, b, sizeof(b)));
+        terminal_writeln(" MB");
+    }
+    if (show_all || has_flag(args, "-u")) {
+        terminal_write_color("Used (RAM FS): ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_write(u32_to_str((used_kb / 1024u) + 1u, b, sizeof(b)));
+        terminal_writeln(" MB");
+    }
+    if (show_all || has_flag(args, "-f")) {
+        terminal_write_color("Estimated free: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_write(u32_to_str((free_kb / 1024u) + 1u, b, sizeof(b)));
+        terminal_writeln(" MB");
+    }
+    if (show_all || has_flag(args, "-p")) {
+        terminal_write_color("Used percent: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_write(u32_to_str(pct, b, sizeof(b)));
+        terminal_writeln("%");
+    }
+    if (show_all || has_flag(args, "-m")) {
+        terminal_write_color("Raw totals: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_write("total=");
+        terminal_write(u32_to_str(total_kb, b, sizeof(b)));
+        terminal_write("KiB used=");
+        terminal_write(u32_to_str(used_kb, b, sizeof(b)));
+        terminal_write("KiB free=");
+        terminal_write(u32_to_str(free_kb, b, sizeof(b)));
+        terminal_writeln("KiB");
+    }
+}
+
+static void cmd_gpu_info(const char* args) {
+    const fb_info_t* fi = fb_info();
+    int show_all = (!args || !*k_skip_spaces(args));
+    char b[16];
+
+    if (!fb_available() || !fi || fi->width == 0 || fi->height == 0) {
+        terminal_writeln("No framebuffer GPU info available.");
+        return;
+    }
+
+    if (show_all || has_flag(args, "-n")) {
+        terminal_write_color("GPU: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln("Generic VBE/Multiboot framebuffer");
+    }
+    if (show_all || has_flag(args, "-r")) {
+        terminal_write_color("Resolution: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_write(u32_to_str(fi->width, b, sizeof(b)));
+        terminal_write("x");
+        terminal_writeln(u32_to_str(fi->height, b, sizeof(b)));
+    }
+    if (show_all || has_flag(args, "-b")) {
+        terminal_write_color("BPP: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(u32_to_str(fi->bpp, b, sizeof(b)));
+    }
+    if (show_all || has_flag(args, "-p")) {
+        terminal_write_color("Pitch: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_write(u32_to_str(fi->pitch, b, sizeof(b)));
+        terminal_writeln(" bytes/row");
+    }
+    if (show_all || has_flag(args, "-m")) {
+        terminal_write_color("Framebuffer addr: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(u32_to_str((uint32_t)fi->addr, b, sizeof(b)));
+    }
+}
+
+static void cmd_hw_info(const char* args) {
+    int show_all = (!args || !*k_skip_spaces(args));
+    rtc_datetime_t dt;
+
+    if (show_all || has_flag(args, "-c")) cmd_proc_info("-n -v -c -t");
+    if (show_all || has_flag(args, "-m")) cmd_ram_info("-t -u -f -p");
+    if (show_all || has_flag(args, "-g")) cmd_gpu_info("-n -r -b");
+    if (show_all || has_flag(args, "-u")) {
+        terminal_write_color("USB: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(usb_status());
+    }
+    if (show_all || has_flag(args, "-k")) {
+        terminal_write_color("Keyboard layout: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        terminal_writeln(keyboard_layout_name());
+    }
+    if (show_all || has_flag(args, "-r")) {
+        char b[16];
+        if (rtc_read_datetime(&dt) == 0) {
+            terminal_write_color("RTC: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+            if (dt.hour < 10) terminal_putchar('0');
+            terminal_write(u32_to_str(dt.hour, b, sizeof(b)));
+            terminal_putchar(':');
+            if (dt.minute < 10) terminal_putchar('0');
+            terminal_write(u32_to_str(dt.minute, b, sizeof(b)));
+            terminal_putchar(':');
+            if (dt.second < 10) terminal_putchar('0');
+            terminal_writeln(u32_to_str(dt.second, b, sizeof(b)));
+        } else {
+            terminal_writeln("RTC: unavailable");
+        }
+    }
 }
 
 static void fmt_u32(char* dst, int dstlen, uint32_t v) {
@@ -235,11 +399,11 @@ static void cmd_top(void) {
         terminal_clear();
 
         /* ── HEADER ───────────────────────────── */
-        terminal_write_color("Banana OS 0.2 htop - press q to quit\n",
+        terminal_write_color("Banana OS 0.3 htop - press q to quit\n",
                              VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
         terminal_writeln("--------------------------------------------");
 
-        char b1[16], b2[16], b3[16], b4[16];
+        char b1[16], b2[16], b3[16];
 
         /* CPU NAME */
         terminal_write_color("CPU: ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
@@ -247,7 +411,7 @@ static void cmd_top(void) {
 
         /* OS VERSION */
         terminal_write_color("OS:  ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-        terminal_writeln("Banana OS 0.2 (Banana Kernel 0.2)");
+        terminal_writeln("Banana OS 0.3 (Banana Kernel 0.3)");
 
         /* RAM USAGE */
         uint32_t total_mb = (si->mem_kb / 1024u) + 1u;
@@ -316,9 +480,10 @@ static void cmd_top(void) {
             draw_bar(cpu, 100);
 
             terminal_write("   ");
-            terminal_write(process_state_str(procs[i].state));
+            const char* state = process_state_str(procs[i].state);
+            terminal_write(state);
 
-            int sl = k_strlen(process_state_str(procs[i].state));
+            int sl = k_strlen(state);
             for (int s = sl; s < 8; s++) terminal_putchar(' ');
 
             terminal_write(" ");
@@ -343,7 +508,7 @@ static void cmd_top(void) {
 
 static void cmd_help(void) {
     static const char* lines[] = {
-        "Banana OS 0.2 - available commands:",
+        "Banana OS 0.3 - available commands:",
         "",
         "  help               show this message",
         "  neofetch           system information",
@@ -366,6 +531,10 @@ static void cmd_help(void) {
         "  keyboardctl [lay]  show/set keyboard layout",
         "  loadctl [lay]      alias of keyboardctl",
         "  usbctl             show USB legacy handoff status",
+        "  proc_info [flags]  cpu info (-c -t -n -v -f -m -s -ht)",
+        "  ram_info [flags]   ram info (-t -u -f -p -m)",
+        "  gpu_info [flags]   gpu/fb info (-n -r -b -p -m)",
+        "  hw_info [flags]    hardware summary (-c -m -g -u -k -r)",
         "  pwd                print working directory",
         "  shutdown [now|-c]  schedule shutdown (60s), now, or cancel",
         "  reboot             immediate reboot",
@@ -506,7 +675,7 @@ static void cmd_run(const char* name) {
 }
 
 static void cmd_uname(void) {
-    terminal_writeln("Banana OS 0.2 x86 Banana Kernel 0.2 sh");
+    terminal_writeln("Banana OS 0.3 x86 Banana Kernel 0.3 sh");
 }
 
 static void cmd_halt(void) {
@@ -517,7 +686,7 @@ static void cmd_halt(void) {
 /* ── prompt ─────────────────────────────────────────────────────── */
 static void print_prompt(void) {
     terminal_write_color("banana",      VGA_COLOR_YELLOW,      VGA_COLOR_BLACK);
-    terminal_write_color("@banana-os-0.2",  VGA_COLOR_LIGHT_GREEN,  VGA_COLOR_BLACK);
+    terminal_write_color("@banana-os-0.3",  VGA_COLOR_LIGHT_GREEN,  VGA_COLOR_BLACK);
     terminal_write_color(":",           VGA_COLOR_WHITE,        VGA_COLOR_BLACK);
     terminal_write_color(fs_cwd_name(), VGA_COLOR_LIGHT_BLUE,   VGA_COLOR_BLACK);
     terminal_write_color("$ ",          VGA_COLOR_WHITE,        VGA_COLOR_BLACK);
@@ -673,6 +842,10 @@ static void dispatch(const char* line) {
     if (k_strcmp(line, "keyboardctl") == 0) { cmd_keyboardctl(""); return; }
     if (k_strcmp(line, "loadctl")  == 0) { cmd_keyboardctl(""); return; }
     if (k_strcmp(line, "usbctl")   == 0) { terminal_writeln(usb_status()); return; }
+    if (k_strcmp(line, "proc_info") == 0) { cmd_proc_info(""); return; }
+    if (k_strcmp(line, "ram_info")  == 0) { cmd_ram_info(""); return; }
+    if (k_strcmp(line, "gpu_info")  == 0) { cmd_gpu_info(""); return; }
+    if (k_strcmp(line, "hw_info")   == 0) { cmd_hw_info(""); return; }
     if (k_strcmp(line, "cd")       == 0) { fs_cd("/");       return; }
     if (k_strcmp(line, "echo")     == 0) { terminal_putchar('\n'); return; }
     if (k_strcmp(line, "run")      == 0) {
@@ -704,6 +877,10 @@ static void dispatch(const char* line) {
     if (k_strncmp(line, "run ",  4) == 0) { cmd_run(k_skip_spaces(line+4)); return; }
     if (k_strncmp(line, "keyboardctl ", 12) == 0) { cmd_keyboardctl(k_skip_spaces(line+12)); return; }
     if (k_strncmp(line, "loadctl ", 8) == 0) { cmd_keyboardctl(k_skip_spaces(line+8)); return; }
+    if (k_strncmp(line, "proc_info ", 10) == 0) { cmd_proc_info(k_skip_spaces(line+10)); return; }
+    if (k_strncmp(line, "ram_info ", 9) == 0) { cmd_ram_info(k_skip_spaces(line+9)); return; }
+    if (k_strncmp(line, "gpu_info ", 9) == 0) { cmd_gpu_info(k_skip_spaces(line+9)); return; }
+    if (k_strncmp(line, "hw_info ", 8) == 0) { cmd_hw_info(k_skip_spaces(line+8)); return; }
 
     /* unknown */
     terminal_write_color("sh: command not found: ", VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
@@ -741,7 +918,7 @@ void shell_run(void) {
         VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
     
     terminal_writeln("");
-    terminal_write_color("  Welcome to Banana OS 0.2  --  ",
+    terminal_write_color("  Welcome to Banana OS 0.3  --  ",
                          VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     terminal_writeln("type 'help' to get started.");
     terminal_writeln("");

@@ -56,6 +56,7 @@ void terminal_vt_free(int vt);
 void terminal_vt_set_active(int vt);   /* selects vt for subsequent output */
 int  terminal_vt_get_active(void);
 void terminal_vt_get_buffer(int vt, const char** chars, const uint8_t** colors, int* width, int* height, int* stride);
+void terminal_vt_get_cursor(int vt, size_t* row, size_t* col);
 
 /* GUI helpers */
 void terminal_get_cursor(size_t* row, size_t* col);

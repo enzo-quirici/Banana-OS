@@ -104,6 +104,35 @@ static void fb_draw_cell(size_t row, size_t col) {
     gfx_draw_char_scaled(x, y, scale, vt_chars[vt_active][row][col], vga_color_rgb(fg), vga_color_rgb(bg));
 }
 
+static void fb_draw_cursor_overlay(size_t row, size_t col) {
+    if (!gfx_available()) return;
+    if (term_mode != TERMINAL_MODE_FRAMEBUFFER) return;
+    if (row >= terminal_fb_rows() || col >= terminal_fb_cols()) return;
+
+    uint8_t color = vt_colors[vt_active][row][col];
+    uint8_t fg = color & 0x0F;
+    int scale = term_fb_scale;
+    if (scale < 1) scale = 1;
+    int x = (int)col * 8 * scale;
+    int y = (int)row * 8 * scale;
+    int h = (scale > 1) ? 2 : 1;
+    gfx_fill_rect(x, y + (8 * scale - h), 8 * scale, h, vga_color_rgb(fg));
+}
+
+static void fb_refresh_cursor(size_t old_row, size_t old_col) {
+    if (!gfx_available()) return;
+    if (term_mode != TERMINAL_MODE_FRAMEBUFFER) return;
+
+    if (old_row < terminal_fb_rows() && old_col < terminal_fb_cols()) {
+        fb_draw_cell(old_row, old_col);
+    }
+    if (term_row < terminal_fb_rows() && term_col < terminal_fb_cols()) {
+        fb_draw_cell(term_row, term_col);
+        fb_draw_cursor_overlay(term_row, term_col);
+    }
+    fb_present();
+}
+
 static void fb_redraw_all(void) {
     if (!gfx_available()) return;
     for (size_t y = 0; y < terminal_fb_rows(); y++) {
@@ -111,6 +140,7 @@ static void fb_redraw_all(void) {
             fb_draw_cell(y, x);
         }
     }
+    fb_draw_cursor_overlay(term_row, term_col);
     fb_present();
 }
 
@@ -253,6 +283,8 @@ void terminal_putchar(char c) {
     size_t h = terminal_usable_height();
     if (h == 0) return;
     size_t w = terminal_width();
+    size_t old_row = term_row;
+    size_t old_col = term_col;
 
     if (term_mode == TERMINAL_MODE_SUSPENDED) {
         /* Keep backing store up to date so GUI can render terminal window */
@@ -290,11 +322,13 @@ void terminal_putchar(char c) {
         if (++term_row == h)
             terminal_scroll();
         if (term_mode != TERMINAL_MODE_FRAMEBUFFER) terminal_update_cursor();
+        else fb_refresh_cursor(old_row, old_col);
         return;
     }
     if (c == '\r') {
         term_col = 0;
         if (term_mode != TERMINAL_MODE_FRAMEBUFFER) terminal_update_cursor();
+        else fb_refresh_cursor(old_row, old_col);
         return;
     }
     if (c == '\b') {
@@ -310,6 +344,7 @@ void terminal_putchar(char c) {
             }
         }
         if (term_mode != TERMINAL_MODE_FRAMEBUFFER) terminal_update_cursor();
+        else fb_refresh_cursor(old_row, old_col);
         return;
     }
 
@@ -330,6 +365,7 @@ void terminal_putchar(char c) {
     vt_row[vt_active] = term_row;
     vt_col[vt_active] = term_col;
     if (term_mode != TERMINAL_MODE_FRAMEBUFFER) terminal_update_cursor();
+    else fb_refresh_cursor(old_row, old_col);
 }
 
 void terminal_write(const char* str) {
@@ -351,26 +387,34 @@ void terminal_write_color(const char* str, uint8_t fg, uint8_t bg) {
 
 void terminal_cursor_left(void) {
     if (term_col > 0) {
+        size_t old_row = term_row, old_col = term_col;
         term_col--;
         if (term_mode != TERMINAL_MODE_FRAMEBUFFER) terminal_update_cursor();
+        else fb_refresh_cursor(old_row, old_col);
     }
 }
 
 void terminal_cursor_right(void) {
-    if (term_col + 1 < VGA_WIDTH) {
+    size_t w = terminal_width();
+    if (term_col + 1 < w) {
+        size_t old_row = term_row, old_col = term_col;
         term_col++;
         if (term_mode != TERMINAL_MODE_FRAMEBUFFER) terminal_update_cursor();
+        else fb_refresh_cursor(old_row, old_col);
     }
 }
 
 void terminal_set_cursor(size_t row, size_t col) {
     size_t h = terminal_usable_height();
+    size_t w = terminal_width();
+    size_t old_row = term_row, old_col = term_col;
     if (h == 0) { row = 0; col = 0; }
     else if (row >= h) row = h - 1;
-    if (col >= VGA_WIDTH)  col = VGA_WIDTH - 1;
+    if (col >= w)  col = w - 1;
     term_row = row;
     term_col = col;
     if (term_mode != TERMINAL_MODE_FRAMEBUFFER) terminal_update_cursor();
+    else fb_refresh_cursor(old_row, old_col);
 }
 
 void terminal_get_cursor(size_t* row, size_t* col) {
@@ -416,7 +460,11 @@ void terminal_write_at(const char* str, uint8_t fg, uint8_t bg, size_t row, size
 }
 
 void terminal_set_mode(terminal_mode_t mode) {
+    size_t old_row = term_row, old_col = term_col;
     term_mode = mode;
+    if (term_mode == TERMINAL_MODE_FRAMEBUFFER && gfx_available()) {
+        fb_refresh_cursor(old_row, old_col);
+    }
 }
 
 terminal_mode_t terminal_get_mode(void) {
@@ -497,4 +545,14 @@ void terminal_vt_get_buffer(int vt, const char** chars, const uint8_t** colors, 
     if (width)  *width = (int)terminal_width();
     if (height) *height = (int)terminal_height();
     if (stride) *stride = FB_MAX_COLS;
+}
+
+void terminal_vt_get_cursor(int vt, size_t* row, size_t* col) {
+    if (vt < 0 || vt >= VT_MAX || !vt_used[vt]) {
+        if (row) *row = 0;
+        if (col) *col = 0;
+        return;
+    }
+    if (row) *row = vt_row[vt];
+    if (col) *col = vt_col[vt];
 }

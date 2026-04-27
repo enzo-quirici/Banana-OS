@@ -3,6 +3,7 @@
 #include "sysinfo.h"
 #include "process.h"
 #include "timer.h"
+#include "rtc.h"
 #include "usb.h"
 #include "daemon.h"
 #include "types.h"
@@ -23,6 +24,7 @@ void kernel_main(uint32_t magic, uint32_t mb_info) {
 
     terminal_init();
     timer_init();
+    rtc_init();
     process_init();
     usb_init();       /* xHCI legacy handoff → USB keyboards work via PS/2 */
     mouse_init();     /* enable PS/2 AUX port for USB/PS2 mice */

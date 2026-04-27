@@ -1,4 +1,4 @@
-# Banana OS 0.2 Makefile
+# Banana OS 0.3 Makefile
 # Requires: nasm, gcc-multilib, ld, grub-pc-bin, grub-common, xorriso
 
 CC      = gcc
@@ -14,6 +14,7 @@ OBJS = boot/boot.o \
        kernel/terminal.o \
        kernel/keyboard.o \
        kernel/timer.o \
+       kernel/rtc.o \
        kernel/gui.o \
        kernel/fb.o \
        kernel/font8x8.o \
@@ -35,6 +36,7 @@ boot/boot.o:       boot/boot.asm;              $(AS) $(ASFLAGS) $< -o $@
 kernel/terminal.o: kernel/terminal.c;          $(CC) $(CFLAGS) -c $< -o $@
 kernel/keyboard.o: kernel/keyboard.c;          $(CC) $(CFLAGS) -c $< -o $@
 kernel/timer.o:    kernel/timer.c;             $(CC) $(CFLAGS) -c $< -o $@
+kernel/rtc.o:      kernel/rtc.c;               $(CC) $(CFLAGS) -c $< -o $@
 kernel/gui.o:      kernel/gui.c;               $(CC) $(CFLAGS) -c $< -o $@
 kernel/fb.o:       kernel/fb.c;                $(CC) $(CFLAGS) -c $< -o $@
 kernel/font8x8.o:  kernel/font8x8.c;           $(CC) $(CFLAGS) -c $< -o $@

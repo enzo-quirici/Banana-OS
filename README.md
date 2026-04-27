@@ -1,6 +1,6 @@
-# 🍌 Banana OS 0.2
+# 🍌 Banana OS 0.3
 
-Banana OS 0.2 is a minimal x86 operating system written from scratch (no Linux kernel, no external OS kernel), bootable in VirtualBox/QEMU via GRUB + Multiboot2.
+Banana OS 0.3 is a minimal x86 operating system written from scratch (no Linux kernel, no external OS kernel), bootable in VirtualBox/QEMU via GRUB + Multiboot2.
 
 ```
   ____                               ____  ____
@@ -47,6 +47,9 @@ bananOS/
 - GUI desktop (started on demand with `startx`)
 - PS/2 keyboard + PS/2 mouse support
 - Multiple draggable terminal windows in GUI mode
+- Fluxbox-inspired dark desktop theme
+- Wallpaper app with PNG-backed graphical presets from `assets/wallpapers/`
+- Desktop and menu icons for built-in apps
 - In-memory filesystem + shell utilities
 - Built-in editor and live system monitor
 
@@ -68,10 +71,12 @@ bananOS/
 - Start menu entries:
   - About app
   - Terminal
+  - Wallpaper
   - Quit GUI
 - Desktop shortcuts:
   - About
   - Terminal
+  - Wallpaper
   - Quit GUI
 - Up to 4 terminal windows (draggable, closable, focusable)
 
@@ -125,7 +130,7 @@ make
 ## Run in VirtualBox
 
 1. Create a new VM:
-   - Name: `Banana OS 0.2`
+   - Name: `Banana OS 0.3`
    - Type: `Other`
    - Version: `Other/Unknown (32-bit)`
 2. Assign at least **8 MB RAM** (more recommended for GUI/testing)

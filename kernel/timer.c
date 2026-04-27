@@ -14,6 +14,9 @@
 // ✅ global tick counter (must be at file scope)
 static volatile uint32_t _ticks = 0;
 static uint16_t pit_divisor = 0;
+static uint16_t last_pit_value = 0;
+
+static uint16_t pit_read(void);
 
 /* ────────────────────────────────────────────── */
 /* Low-level port I/O                            */
@@ -52,6 +55,7 @@ void timer_init(void) {
 
     pit_divisor = (uint16_t)divisor;
     _ticks = 0;
+    last_pit_value = pit_read();
 }
 
 /* ────────────────────────────────────────────── */
@@ -74,6 +78,14 @@ uint32_t timer_ticks(void) {
     return _ticks;
 }
 
+void timer_poll(void) {
+    if (pit_divisor == 0) return;
+    uint16_t cur = pit_read();
+    /* mode 2 downcounter reload appears as cur > last */
+    if (cur > last_pit_value) _ticks++;
+    last_pit_value = cur;
+}
+
 /*
  * Sleep based on PIT wraps (stable in VMs and real hardware).
  * At 100 Hz, one wrap ~= 10 ms.
@@ -90,18 +102,8 @@ void timer_sleep_ms(uint32_t ms) {
     uint32_t target_wraps = (ms * PIT_HZ + 999u) / 1000u; /* ceil(ms / 10ms) */
     if (target_wraps == 0) target_wraps = 1;
 
-    uint32_t wraps = 0;
-    uint16_t prev = pit_read();
-
-    while (wraps < target_wraps) {
-        uint16_t cur = pit_read();
-        /*
-         * In mode 2, counter counts down and reloads to a high value.
-         * Reload edge appears as cur > prev.
-         */
-        if (cur > prev) wraps++;
-        prev = cur;
+    uint32_t start = timer_ticks();
+    while ((timer_ticks() - start) < target_wraps) {
+        timer_poll();
     }
-
-    _ticks += target_wraps;
 }

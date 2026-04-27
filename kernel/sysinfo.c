@@ -22,6 +22,17 @@ static void cpuid(uint32_t leaf,
     );
 }
 
+static void cpuid_ex(uint32_t leaf, uint32_t subleaf,
+                     uint32_t* eax, uint32_t* ebx,
+                     uint32_t* ecx, uint32_t* edx) {
+    __asm__ volatile(
+        "cpuid"
+        : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx)
+        : "a"(leaf), "c"(subleaf)
+        :
+    );
+}
+
 static void store_str(char* dst, uint32_t val) {
     dst[0] = (val)       & 0xFF;
     dst[1] = (val >>  8) & 0xFF;
@@ -31,9 +42,12 @@ static void store_str(char* dst, uint32_t val) {
 
 void sysinfo_init(uint32_t mb_info_addr) {
     uint32_t eax, ebx, ecx, edx;
+    uint32_t max_basic = 0;
+    uint32_t max_ext = 0;
 
     /* ── CPU vendor ─────────────────────────────────────────────── */
     cpuid(0, &eax, &ebx, &ecx, &edx);
+    max_basic = eax;
     store_str(info.cpu_vendor + 0, ebx);
     store_str(info.cpu_vendor + 4, edx);
     store_str(info.cpu_vendor + 8, ecx);
@@ -41,7 +55,8 @@ void sysinfo_init(uint32_t mb_info_addr) {
 
     /* ── CPU brand string (leaves 0x80000002-4) ─────────────────── */
     cpuid(0x80000000, &eax, &ebx, &ecx, &edx);
-    if (eax >= 0x80000004) {
+    max_ext = eax;
+    if (max_ext >= 0x80000004) {
         uint32_t* p = (uint32_t*)info.cpu_brand;
         for (uint32_t leaf = 0x80000002; leaf <= 0x80000004; leaf++) {
             cpuid(leaf, &eax, &ebx, &ecx, &edx);
@@ -66,6 +81,45 @@ void sysinfo_init(uint32_t mb_info_addr) {
         while (fb[i]) { info.cpu_brand[i] = fb[i]; i++; }
         info.cpu_brand[i] = '\0';
     }
+
+    /* ── CPU topology / id ───────────────────────────────────────── */
+    info.cpu_cores = 1;
+    info.cpu_threads = 1;
+    info.cpu_family = 0;
+    info.cpu_model = 0;
+    info.cpu_stepping = 0;
+    info.cpu_has_ht = 0;
+
+    if (max_basic >= 1) {
+        cpuid(1, &eax, &ebx, &ecx, &edx);
+        uint32_t stepping = eax & 0xFu;
+        uint32_t model = (eax >> 4) & 0xFu;
+        uint32_t family = (eax >> 8) & 0xFu;
+        uint32_t ext_model = (eax >> 16) & 0xFu;
+        uint32_t ext_family = (eax >> 20) & 0xFFu;
+        if (family == 0xFu) family += ext_family;
+        if (family == 0x6u || family == 0xFu) model += (ext_model << 4);
+
+        info.cpu_family = family;
+        info.cpu_model = model;
+        info.cpu_stepping = stepping;
+        info.cpu_has_ht = (edx & (1u << 28)) ? 1u : 0u;
+
+        uint32_t logical = (ebx >> 16) & 0xFFu;
+        if (logical > 0) info.cpu_threads = logical;
+    }
+
+    if (max_basic >= 4) {
+        cpuid_ex(4, 0, &eax, &ebx, &ecx, &edx);
+        uint32_t cores = ((eax >> 26) & 0x3Fu) + 1u;
+        if (cores > 0) info.cpu_cores = cores;
+    } else if (max_ext >= 0x80000008) {
+        cpuid(0x80000008, &eax, &ebx, &ecx, &edx);
+        uint32_t cores = (ecx & 0xFFu) + 1u;
+        if (cores > 0) info.cpu_cores = cores;
+    }
+
+    if (info.cpu_threads < info.cpu_cores) info.cpu_threads = info.cpu_cores;
 
     /* ── Memory from Multiboot ──────────────────────────────────── */
     if (mb_info_addr) {

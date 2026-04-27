@@ -1,4 +1,4 @@
-/* Banana OS 0.2 linker script */
+/* Banana OS 0.3 linker script */
 ENTRY(_start)
 
 SECTIONS {
